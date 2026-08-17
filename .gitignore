@@ -1,0 +1,12 @@
+﻿.venv/
+__pycache__/
+*.pyc
+cache/*
+logs/*
+data/*
+anime-inspection/
+.env
+*.html
+*.mp4
+*.mkv
+*.avi
