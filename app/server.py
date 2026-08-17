@@ -1,15 +1,19 @@
-﻿from flask import Flask, jsonify
+﻿from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from app.service import AnimeService
 
 app = Flask(__name__)
+
+CORS(app, resources={
+    r"/api/*": {"origins": "*"}
+})
+
 service = AnimeService()
 
 
 @app.get("/api/search")
 def search():
-    from flask import request
-
     query = request.args.get("q", "").strip()
 
     if not query:
