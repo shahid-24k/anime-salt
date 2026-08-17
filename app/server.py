@@ -4,10 +4,7 @@ from flask_cors import CORS
 from app.service import AnimeService
 
 app = Flask(__name__)
-
-CORS(app, resources={
-    r"/api/*": {"origins": "*"}
-})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 service = AnimeService()
 
