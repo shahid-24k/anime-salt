@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Search, Play, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, Play, Search } from "lucide-react";
 import "./App.css";
 
 const API = "https://anime-salt-api.onrender.com";
@@ -21,10 +21,11 @@ export default function App() {
 
     try {
       const response = await fetch(
-        `${API}/api/search?q=${encodeURIComponent(query)}`
+        `${API}/api/search?q=${encodeURIComponent(query.trim())}`
       );
+      if (!response.ok) throw new Error();
       const data = await response.json();
-      setResults(data);
+      setResults(Array.isArray(data) ? data : []);
     } catch {
       setResults([]);
     } finally {
@@ -40,6 +41,9 @@ export default function App() {
       const response = await fetch(
         `${API}/api/anime/${encodeURIComponent(title)}`
       );
+
+      if (!response.ok) throw new Error();
+
       const data = await response.json();
 
       setAnime(data);
@@ -53,7 +57,16 @@ export default function App() {
     }
   }
 
+  function selectEpisode(episode) {
+    setSelectedEpisode(episode);
+    setSelectedLanguage(episode.sources?.[0]?.language || null);
+  }
+
   const episodes = anime?.seasons?.[0]?.episodes || [];
+
+  const selectedSource = selectedEpisode?.sources?.find(
+    (source) => source.language === selectedLanguage
+  );
 
   return (
     <div className="app">
@@ -79,6 +92,7 @@ export default function App() {
             <div>
               <p className="eyebrow">YOUR ANIME HUB</p>
               <h1>Watch. Discover.<br />Enjoy.</h1>
+
               <p className="hero-text">
                 Search your favorite anime and explore available episodes,
                 languages and metadata.
@@ -86,13 +100,19 @@ export default function App() {
 
               <form className="hero-search" onSubmit={searchAnime}>
                 <Search size={21} />
+
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search Death Note..."
                 />
-                <button type="submit">
-                  {loading ? <Loader2 className="spin" /> : "Search"}
+
+                <button type="submit" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="spin" size={20} />
+                  ) : (
+                    "Search"
+                  )}
                 </button>
               </form>
             </div>
@@ -106,7 +126,7 @@ export default function App() {
           </div>
         )}
 
-        {!anime && results.length > 0 && (
+        {!anime && !loading && results.length > 0 && (
           <section className="results">
             <h2>Search results</h2>
 
@@ -123,9 +143,17 @@ export default function App() {
                   />
 
                   <div className="card-info">
-                    <h3>{item.title?.english || item.title?.romaji}</h3>
-                    <p>{item.genres?.slice(0, 3).join(" • ")}</p>
-                    <span>{item.episodes || "?"} episodes</span>
+                    <h3>
+                      {item.title?.english || item.title?.romaji}
+                    </h3>
+
+                    <p>
+                      {item.genres?.slice(0, 3).join(" • ")}
+                    </p>
+
+                    <span>
+                      {item.episodes || "?"} episodes
+                    </span>
                   </div>
                 </button>
               ))}
@@ -151,8 +179,13 @@ export default function App() {
 
               <div>
                 <p className="eyebrow">ANIME</p>
+
                 <h1>{anime.title}</h1>
-                <p className="genres">{anime.genres?.join(" • ")}</p>
+
+                <p className="genres">
+                  {anime.genres?.join(" • ")}
+                </p>
+
                 <p className="popularity">
                   Popularity #{anime.popularity?.toLocaleString()}
                 </p>
@@ -172,10 +205,7 @@ export default function App() {
                           ? "episode active"
                           : "episode"
                       }
-                      onClick={() => {
-                        setSelectedEpisode(episode);
-                        setSelectedLanguage(null);
-                      }}
+                      onClick={() => selectEpisode(episode)}
                     >
                       {episode.number}
                     </button>
@@ -188,39 +218,75 @@ export default function App() {
                   <div className="empty-player">
                     <Play size={42} />
                     <h3>Select an episode</h3>
-                    <p>Choose an episode to see its available languages.</p>
+                    <p>
+                      Choose an episode to start playback.
+                    </p>
                   </div>
                 ) : (
                   <>
-                    <div className="player-placeholder">
-                      <Play size={48} />
-                      <h3>Episode {selectedEpisode.number}</h3>
-                      <p>Select a language below.</p>
-                    </div>
+                    <div className="player-topbar">
+                      <div>
+                        <strong>{anime.title}</strong>
+                        <span>
+                          Episode {selectedEpisode.number}
+                        </span>
+                      </div>
 
-                    <div className="languages">
-                      {selectedEpisode.sources?.map((source) => (
-                        <button
-                          key={source.language}
-                          className={
-                            selectedLanguage === source.language
-                              ? "language active"
-                              : "language"
-                          }
-                          onClick={() =>
-                            setSelectedLanguage(source.language)
-                          }
+                      {selectedSource?.url && (
+                        <a
+                          className="source-link"
+                          href={selectedSource.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Open source"
                         >
-                          {source.language}
-                        </button>
-                      ))}
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
                     </div>
 
-                    {selectedLanguage && (
-                      <p className="selected">
-                        Selected language: <strong>{selectedLanguage}</strong>
-                      </p>
+                    {selectedSource?.url ? (
+                      <div className="video-frame">
+                        <iframe
+                          key={selectedSource.url}
+                          src={selectedSource.url}
+                          title={`${anime.title} Episode ${selectedEpisode.number}`}
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : (
+                      <div className="empty-player compact">
+                        <p>
+                          No playable source is available.
+                        </p>
+                      </div>
                     )}
+
+                    <div className="player-footer">
+                      <div className="languages">
+                        {selectedEpisode.sources?.map((source) => (
+                          <button
+                            key={source.language}
+                            className={
+                              selectedLanguage === source.language
+                                ? "language active"
+                                : "language"
+                            }
+                            onClick={() =>
+                              setSelectedLanguage(source.language)
+                            }
+                          >
+                            {source.language}
+                          </button>
+                        ))}
+                      </div>
+
+                      <span className="selected">
+                        {selectedLanguage || "No language selected"}
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
