@@ -15,6 +15,7 @@ class Episode:
     number: int
     title: Optional[str] = None
     sources: List[Source] = field(default_factory=list)
+    provider_ids: List[dict] = field(default_factory=list)
 
 
 @dataclass
